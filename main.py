@@ -1,6 +1,6 @@
-def main():
-    print("Hello from leavemanagmentsystem!")
+from fastapi import FastAPI
+from src.api.v1.router.routes import api_router
 
+app = FastAPI()
 
-if __name__ == "__main__":
-    main()
+app.include_router(api_router)
