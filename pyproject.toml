@@ -1,5 +1,5 @@
 [project]
-name = "leavemanagmentsystem"
+name = "leavemanagementsystem"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -13,6 +13,7 @@ dependencies = [
     "pydantic[email]>=2.12.5",
     "pydantic-settings>=2.13.1",
     "python-jose>=3.5.0",
+    "psycopg2>=2.9.11",
     "sqlalchemy>=2.0.48",
     "sqlmodel>=0.0.37",
     "uvicorn>=0.42.0",
