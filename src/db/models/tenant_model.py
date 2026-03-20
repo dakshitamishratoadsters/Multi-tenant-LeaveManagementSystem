@@ -1,8 +1,11 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import Column, Relationship, SQLModel, Field
 from datetime import datetime
 import uuid
 import enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional,List
+if TYPE_CHECKING:
+    from src.db.models.user_model import User
+from sqlalchemy import types as pg
 
 
 class CompanyType(str, enum.Enum):
@@ -32,4 +35,15 @@ class Tenant(SQLModel, table=True):
     company_size: CompanySize
     domain: Optional[str] = Field(default=None, unique=True)
     invite_code: Optional[str] = Field(default=None, unique= True ,index=True)
+    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        sa_column=Column(pg.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    )
+    users: List["User"] = Relationship(
+    back_populates="tenant",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "passive_deletes": True
+    }
+)

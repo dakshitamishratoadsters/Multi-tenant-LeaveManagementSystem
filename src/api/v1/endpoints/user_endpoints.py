@@ -1,62 +1,69 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-import uuid
+from uuid import UUID
 
-from src.db.deps import get_db
+from src.db.dependencies import get_db
 from src.services.user_services import UserService
-from src.schemas.user_schemas import UserCreate, UserUpdate
+from src.schemas.user_schemas import (
+    UserCreate, UserLogin, UserUpdate, AdminUserUpdate, 
+    UserResponse
+)
+from src.utils.auth_utils import get_current_user, create_access_token
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.get("/")
-async def get_users(db:AsyncSession = Depends(get_db)):
+# ---------------- SIGNUP ----------------
+@router.post("/signup", response_model=UserResponse)
+async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
     service = UserService(db)
-    # Using a sample UUID - replace with actual tenant logic
-    sample_tenant_id = uuid.UUID("12345678-1234-5678-9abc-123456789abc")
-    return await service.get_all_users(tenant_id=sample_tenant_id)
+    new_user = await service.create_user(user)
+    return new_user
 
-@router.get("/{user_id}")
-async def get_user(user_id:int, db:AsyncSession = Depends(get_db)):
+# ---------------- LOGIN ----------------
+@router.post("/login")
+async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):
     service = UserService(db)
-    # Using a sample UUID - replace with actual tenant logic
-    sample_tenant_id = uuid.UUID("12345678-1234-5678-9abc-123456789abc")
+    db_user = await service.authenticate_user(user.email, user.password)
+    if not db_user or not db_user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    token = create_access_token({"sub": str(db_user.id), "tenant_id": str(db_user.tenant_id)})
+    return {"access_token": token, "token_type": "bearer"}
 
-    user = await service.get_user_by_id(user_id , tenant_id=sample_tenant_id)
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return user
-
-@router.post("/")
-async def create_user(user:UserCreate, db: AsyncSession = Depends(get_db)):
+# ---------------- GET ALL USERS (Tenant Scoped) ----------------
+@router.get("/", response_model=list[UserResponse])
+async def get_users(current_user: UserResponse = Depends(get_current_user),
+                    db: AsyncSession = Depends(get_db)):
     service = UserService(db)
-    return await service.create_user(user)
+    users = await service.get_all_users(current_user.tenant_id)
+    return users
 
-@router.put("/{user_id}")
-async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db)):
+# ---------------- UPDATE USER (Normal User) ----------------
+@router.put("/me", response_model=UserResponse)
+async def update_me(user_update: UserUpdate,
+                    current_user: UserResponse = Depends(get_current_user),
+                    db: AsyncSession = Depends(get_db)):
     service = UserService(db)
-    # Using a sample UUID - replace with actual tenant logic
-    sample_tenant_id = uuid.UUID("12345678-1234-5678-9abc-123456789abc")
+    updated_user = await service.update_user(current_user.id, current_user.tenant_id, user_update)
+    return updated_user
 
-    update_user = await service.update_user(user_id, user, tenant_id=sample_tenant_id)
+# ---------------- ADMIN UPDATE USER ----------------
+@router.put("/{user_id}", response_model=UserResponse)
+async def admin_update_user(user_id: UUID, user_update: AdminUserUpdate,
+                            current_user: UserResponse = Depends(get_current_user),
+                            db: AsyncSession = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can update other users")
+    service = UserService(db)
+    updated_user = await service.admin_update_user(user_id, current_user.tenant_id, user_update)
+    return updated_user
 
-    if not update_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return update_user
-
+# ---------------- DELETE USER (Soft Delete) ----------------
 @router.delete("/{user_id}")
-async def delete_user(user_id:int, db:AsyncSession = Depends(get_db)):
+async def delete_user(user_id: UUID,
+                      current_user: UserResponse = Depends(get_current_user),
+                      db: AsyncSession = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete users")
     service = UserService(db)
-    # Using a sample UUID - replace with actual tenant logic
-    sample_tenant_id = uuid.UUID("12345678-1234-5678-9abc-123456789abc")
-
-    result = await service.delete_user(user_id, tenant_id=sample_tenant_id)
-
-    if not result:
-        raise HTTPException(status_code=404, detail="User not found")
-    
+    result = await service.delete_user(user_id, current_user.tenant_id)
     return result
-
-

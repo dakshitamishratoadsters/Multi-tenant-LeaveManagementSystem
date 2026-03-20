@@ -1,8 +1,9 @@
+from pydantic import config
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from src.core.config import Config
+from src.core.config import config
 
-DATABASE_URL = Config.DATABASE_URL
+DATABASE_URL = config.DATABASE_URL
 
 engine = create_async_engine(
     DATABASE_URL,
