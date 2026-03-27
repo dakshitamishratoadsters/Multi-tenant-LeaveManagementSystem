@@ -36,7 +36,8 @@ class LeaveRequest(SQLModel, table=True):
     status: LeaveStatus = Field(default=LeaveStatus.PENDING, index=True)
 
     approved_by: Optional[UUID] = Field(default=None, foreign_key="users.id")
-
+    rejected_by: Optional[UUID] = Field(default=None, foreign_key="users.id")
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow,
                                  sa_column_kwargs={"onupdate":datetime.utcnow})
@@ -48,6 +49,9 @@ class LeaveRequest(SQLModel, table=True):
      
     approver: Optional["User"] = Relationship(
       sa_relationship_kwargs={"foreign_keys": "[LeaveRequest.approved_by]"}
+    )
+    rejector: Optional["User"] = Relationship(
+    sa_relationship_kwargs={"foreign_keys": "[LeaveRequest.rejected_by]"}
     )
 
     @model_validator(mode="after")

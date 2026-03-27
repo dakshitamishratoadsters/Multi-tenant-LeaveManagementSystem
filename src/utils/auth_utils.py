@@ -7,8 +7,7 @@ from uuid import UUID
 from src.core.config import config 
 from src.core.security import hash_password as _hash_password, verify_password as _verify_password
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.db.database import get_session
-from src.db.dependencies import get_db
+from src.db.database import get_db
 if TYPE_CHECKING:
     from src.services.user_services import UserService
 from src.schemas.user_schemas import UserResponse
@@ -27,7 +26,7 @@ def create_access_token(
     to_encode = {"sub": user_id, "type": "access"}
     if tenant_id is not None:
         to_encode["tenant_id"] = tenant_id
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTESACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     token = jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)
     return token
@@ -97,7 +96,7 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-
+    from src.services.user_services import UserService  
     service = UserService(session)
     user = await service.get_user_by_id(user_id, tenant_id)
     if not user or not user.is_active:

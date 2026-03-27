@@ -1,20 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
-
-from src.db.dependencies import get_db
+from src.db.database import get_db
 from src.services.user_services import UserService
 from src.schemas.user_schemas import (
     UserCreate, UserLogin, UserUpdate, AdminUserUpdate, 
     UserResponse
 )
+from src.db.dependencies import require_role
+from src.db.models.user_model import User
 from src.utils.auth_utils import get_current_user, create_access_token, create_refresh_token, RefreshTokenBearer
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 # ---------------- SIGNUP ----------------
 @router.post("/signup", response_model=UserResponse)
-async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def signup(user: UserCreate, db: AsyncSession = Depends(get_db),using:User=Depends(require_role("TenantAdmin"))):
     service = UserService(db)
     new_user = await service.create_user(user)
     return new_user

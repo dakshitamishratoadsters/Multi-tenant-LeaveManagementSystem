@@ -8,7 +8,7 @@ from src.db.models.user_model import User
 from src.schemas.LeaveReq_schema import LeaveRequestCreate, LeaveRequestRead
 from src.schemas.LeaveBalance_schema import LeaveBalanceRead
 from src.utils.auth_utils import get_current_user
-from src.db.dependencies import get_db
+from src.db.database import get_db
 
 router = APIRouter(
     prefix="/leaves",
